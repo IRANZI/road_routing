@@ -12,9 +12,37 @@ vector<string> cities;
 int roadMatrix[MAX_CITIES][MAX_CITIES] = {0};
 double budgetMatrix[MAX_CITIES][MAX_CITIES] = {0.0};
 
+string trimString(const string& value) {
+    size_t start = value.find_first_not_of(" \t\r\n");
+    size_t end = value.find_last_not_of(" \t\r\n");
+    return (start == string::npos) ? string() : value.substr(start, end - start + 1);
+}
+
+string normalizeCityName(const string& value) {
+    string trimmed = trimString(value);
+    string normalized;
+    for (char ch : trimmed) {
+        normalized.push_back(static_cast<char>(tolower(ch)));
+    }
+    return normalized;
+}
+
+bool isValidCityName(const string& name) {
+    if (name.empty()) {
+        return false;
+    }
+    for (char ch : name) {
+        if (!(isalpha(static_cast<unsigned char>(ch)) || isspace(static_cast<unsigned char>(ch)))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int getCityIndex(const string& name) {
+    string normalizedName = normalizeCityName(name);
     for (int i = 0; i < static_cast<int>(cities.size()); i++) {
-        if (cities[i] == name) {
+        if (normalizeCityName(cities[i]) == normalizedName) {
             return i;
         }
     }
@@ -40,8 +68,14 @@ void addCities() {
         string name;
         cout << "Enter the name for city " << (cities.size() + 1) << ": ";
         getline(cin, name);
+        name = trimString(name);
         if (name.empty()) {
             cout << "City name cannot be empty. Try again.\n";
+            i--;
+            continue;
+        }
+        if (!isValidCityName(name)) {
+            cout << "City name may contain only letters and spaces. Try again.\n";
             i--;
             continue;
         }
@@ -49,7 +83,7 @@ void addCities() {
             cities.push_back(name);
             cout << "City added: " << name << "\n";
         } else {
-            cout << "City '" << name << "' already exists. Skipping.\n";
+            cout << "City '" << name << "' already exists and will not be added again.\n";
         }
     }
 }
@@ -65,19 +99,30 @@ void addRoad() {
     cout << "Enter the name of the second city: ";
     getline(cin, c2);
 
+    c1 = trimString(c1);
+    c2 = trimString(c2);
+    if (c1.empty() || c2.empty()) {
+        cout << "Both city names must be provided.\n";
+        return;
+    }
+
     int i = getCityIndex(c1);
     int j = getCityIndex(c2);
     if (i == -1 || j == -1) {
-        cout << "One or both cities are invalid.\n";
+        cout << "One or both cities are invalid. Confirm the city names and try again.\n";
         return;
     }
     if (i == j) {
         cout << "A city cannot have a road to itself.\n";
         return;
     }
+    if (roadMatrix[i][j] == 1) {
+        cout << "A road between " << cities[i] << " and " << cities[j] << " already exists.\n";
+        return;
+    }
 
     roadMatrix[i][j] = roadMatrix[j][i] = 1;
-    cout << "Road added successfully between " << c1 << " and " << c2 << "\n";
+    cout << "Road added successfully between " << cities[i] << " and " << cities[j] << "\n";
 }
 
 void addBudget() {
@@ -92,10 +137,17 @@ void addBudget() {
     cout << "Enter the name of the second city: ";
     getline(cin, c2);
 
+    c1 = trimString(c1);
+    c2 = trimString(c2);
+    if (c1.empty() || c2.empty()) {
+        cout << "Both city names must be provided.\n";
+        return;
+    }
+
     int i = getCityIndex(c1);
     int j = getCityIndex(c2);
     if (i == -1 || j == -1) {
-        cout << "One or both cities are invalid.\n";
+        cout << "One or both cities are invalid. Confirm the city names and try again.\n";
         return;
     }
     if (i == j) {
@@ -103,7 +155,7 @@ void addBudget() {
         return;
     }
     if (roadMatrix[i][j] != 1) {
-        cout << "No road exists between the given cities. Budget cannot be added.\n";
+        cout << "No road exists between " << cities[i] << " and " << cities[j] << ". Budget cannot be added.\n";
         return;
     }
 
@@ -115,8 +167,13 @@ void addBudget() {
     }
     clearInput();
 
+    if (budgetMatrix[i][j] > 0.0) {
+        cout << "Existing budget " << fixed << setprecision(2) << budgetMatrix[i][j]
+             << " will be updated.\n";
+    }
+
     budgetMatrix[i][j] = budgetMatrix[j][i] = budget;
-    cout << "Budget added successfully for the road between " << c1 << " and " << c2 << "\n";
+    cout << "Budget added successfully for the road between " << cities[i] << " and " << cities[j] << "\n";
 }
 
 void editCity() {
@@ -140,12 +197,18 @@ void editCity() {
     string newName;
     cout << "Enter the new name for city: ";
     getline(cin, newName);
+    newName = trimString(newName);
     if (newName.empty()) {
         cout << "City name cannot be empty.\n";
         return;
     }
-    if (getCityIndex(newName) != -1) {
-        cout << "A city with that name already exists.\n";
+    if (!isValidCityName(newName)) {
+        cout << "City name may contain only letters and spaces.\n";
+        return;
+    }
+    int duplicateIndex = getCityIndex(newName);
+    if (duplicateIndex != -1 && duplicateIndex != idx - 1) {
+        cout << "A different city with that name already exists.\n";
         return;
     }
 
